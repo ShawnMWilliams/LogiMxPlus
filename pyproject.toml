@@ -1,0 +1,39 @@
+[project]
+name = "logimxplus"
+version = "0.1.0"
+description = "Make a Logitech MX mouse follow your MX keyboard's Easy-Switch keys."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = ["hidapi>=0.14"]
+
+[project.scripts]
+logimxplus = "logimxplus.cli:main"
+
+[project.gui-scripts]
+logimxplusw = "logimxplus.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["hid"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
