@@ -62,6 +62,14 @@ logimxplus status      # shows the keyboard and mouse it can see
 logimxplus install     # start automatically at login (no console window)
 ```
 
+On Windows, `scripts\install-windows.ps1` does all of that in one step and starts the
+program right away. It takes `-Source <path>` to install from a local checkout.
+
+> **Installing from the Claude desktop app's terminal?** Windows quietly redirects that
+> app's AppData writes into its private container. The install would land there, and
+> the login entry would point at it. Run the script from a normal PowerShell window,
+> or through a one-off Scheduled Task, instead.
+
 To run it in the foreground with debug logging:
 
 ```powershell

@@ -32,7 +32,7 @@ and explicit constraints. Work is done when every criterion below passes.
 | G3 | ◐ | Bolt verified. Bluetooth covered by unit test only. |
 | G4 | ✅ | Unit test, plus a live re-arm on keyboard return seen in the log. |
 | G5 | ✅ | Unit tests. |
-| G6 | ⏳ | `logimxplus install` not yet run on the user's machines. |
+| G6 | ◐ | This PC: installed with `scripts/install-windows.ps1`, which was run outside the app container. Running as `pythonw` with no console. The HKCU Run entry was verified from outside the container. Not yet observed across a real sign-out/sign-in. Channel-1 PC: not installed. |
 | G7 | ✅ | `uv run ruff check . && uv run mypy && uv run pytest` exits 0. |
 
 ## Prerequisite
