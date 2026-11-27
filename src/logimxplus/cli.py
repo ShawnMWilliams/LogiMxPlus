@@ -160,7 +160,21 @@ def cmd_config(_: argparse.Namespace) -> int:
     return 0
 
 
+def _attach_parent_console() -> None:
+    """A windowless exe has no stdout; borrow the terminal it was started from, if any."""
+    if sys.stdout is not None or not getattr(sys, "frozen", False):
+        return
+    if sys.platform == "win32":
+        import ctypes
+
+        attach_parent_process = -1
+        if ctypes.windll.kernel32.AttachConsole(attach_parent_process):
+            stream = open("CONOUT$", "w", encoding="utf-8", errors="replace", buffering=1)  # noqa: SIM115
+            sys.stdout = sys.stderr = stream
+
+
 def main(argv: list[str] | None = None) -> int:
+    _attach_parent_console()
     parser = argparse.ArgumentParser(
         prog="logimxplus",
         description="Make your Logitech mouse follow the keyboard's Easy-Switch keys.")

@@ -93,46 +93,70 @@ Notes:
 
 ## Install
 
-You need [uv](https://docs.astral.sh/uv/).
+### Windows: standalone `LogiMxPlus.exe` (no Python needed)
+
+`LogiMxPlus.exe` is a single file of about 8.5 MB with Python bundled inside. Nothing
+else needs to be installed.
+
+To install it for your user, start it at login, and start it now, run this from a
+regular PowerShell window:
+
+```powershell
+git clone https://github.com/ShawnMWilliams/LogiMxPlus
+powershell -ExecutionPolicy Bypass -File .\LogiMxPlus\scripts\install-windows.ps1 -Exe <path-to>\LogiMxPlus.exe
+```
+
+- **Where it goes:** `%LOCALAPPDATA%\Programs\LogiMxPlus\LogiMxPlus.exe`.
+- **Without `-Exe`:** the script downloads `LogiMxPlus.exe` from the latest GitHub release.
+- **Build it yourself:** `scripts\build-exe.ps1` (needs uv) writes `dist\LogiMxPlus.exe`.
+  CI also builds it on every push, as a downloadable artifact.
+
+**Is it running?** Task Manager lists it as **LogiMxPlus** (two entries: a small launcher
+and the program itself). The log's last line should say `keyboard ready`.
+
+> **Installing from the Claude desktop app's terminal?** Windows quietly redirects that
+> app's AppData writes into its private container. The install would land there, and the
+> login entry would point at it. Run the script from a normal PowerShell window, or through
+> a one-off Scheduled Task, instead.
+
+**Uninstall:**
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\LogiMxPlus\LogiMxPlus.exe" uninstall
+Stop-Process -Name LogiMxPlus
+Remove-Item -Recurse "$env:LOCALAPPDATA\Programs\LogiMxPlus"
+```
+
+### macOS / Linux (or Windows from source)
+
+You need [uv](https://docs.astral.sh/uv/):
 
 ```powershell
 uv tool install git+https://github.com/ShawnMWilliams/LogiMxPlus
-logimxplus status      # shows the keyboard and mouse it can see
-logimxplus install     # start automatically at login (no console window)
+logimxplus install
 ```
 
-On Windows, `scripts\install-windows.ps1` does all of that in one step and starts the
-program right away. It takes `-Source <path>` to install from a local checkout.
+The second command makes it start at login.
 
-**Is it running?** In Task Manager it appears as **`logimxplusw.exe`**, with Python
-worker processes under it. The log's last lines should include `keyboard ready`.
+### Commands
 
-> **Installing from the Claude desktop app's terminal?** Windows quietly redirects that
-> app's AppData writes into its private container. The install would land there, and
-> the login entry would point at it. Run the script from a normal PowerShell window,
-> or through a one-off Scheduled Task, instead.
-
-To run it in the foreground with debug logging:
-
-```powershell
-logimxplus -v run
-```
-
-Other commands:
+On Windows, run these as `LogiMxPlus.exe <command>`; with the uv install, use
+`logimxplus <command>`.
 
 | Command | What it does |
 |---|---|
-| `logimxplus status` | List devices, their current channel, and whether Easy-Switch reporting is armed |
-| `logimxplus switch N` | Switch mouse and keyboard to channel N now (handy for a hotkey) |
-| `logimxplus config` | Create the config file and print its path |
-| `logimxplus uninstall` | Remove the login item |
+| `status` | List devices, their firmware, their current channel, and whether Easy-Switch reporting is armed |
+| `-v run` | Run in the foreground with debug logging (`run` with no options is what login starts) |
+| `switch N` | Switch the mouse and keyboard to channel N now (handy for a hotkey) |
+| `config` | Create the config file and print its path |
+| `install` / `uninstall` | Add or remove the login entry |
 
 Logs: `%APPDATA%\LogiMxPlus\logimxplus.log` (Windows),
 `~/Library/Application Support/LogiMxPlus/` (macOS), `~/.config/logimxplus/` (Linux).
 
 ### macOS
 
-Grant **Input Monitoring** to the Python that runs LogiMxPlus (System Settings → Privacy &
+Grant **Input Monitoring** to the Python that runs LogiMxPlus (installed with uv) (System Settings → Privacy &
 Security → Input Monitoring). Otherwise macOS hides the HID++ interface.
 
 ### Linux

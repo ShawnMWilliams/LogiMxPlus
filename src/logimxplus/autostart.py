@@ -14,6 +14,8 @@ LAUNCH_AGENT_LABEL = "tech.logimxplus.agent"
 
 def launch_command() -> list[str]:
     exe = Path(sys.executable)
+    if getattr(sys, "frozen", False):  # standalone LogiMxPlus.exe: no Python needed
+        return [str(exe), "run"]
     if sys.platform == "win32":
         # Prefer the windowless launcher installed with the package, so Task Manager
         # lists the process as "logimxplusw.exe" rather than a generic "Python".

@@ -1,36 +1,44 @@
 <#
 .SYNOPSIS
-    Install LogiMxPlus for the current user, start it at login, and start it now.
+    Install LogiMxPlus.exe for the current user, start it at login, and start it now.
+    No Python needed.
 
-.PARAMETER Source
-    What to install: a local checkout path, or a git URL (default: the GitHub repo).
+.PARAMETER Exe
+    Path to a LogiMxPlus.exe to install. Default: download the latest GitHub release.
 
 .EXAMPLE
     .\scripts\install-windows.ps1
-    .\scripts\install-windows.ps1 -Source .
+    .\scripts\install-windows.ps1 -Exe .\dist\LogiMxPlus.exe
 #>
 param(
-    [string]$Source = "git+https://github.com/ShawnMWilliams/LogiMxPlus"
+    [string]$Exe = ""
 )
 $ErrorActionPreference = "Stop"
+$dest = Join-Path $env:LOCALAPPDATA "Programs\LogiMxPlus"
+$target = Join-Path $dest "LogiMxPlus.exe"
 
-$uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
-if (-not $uv) { throw "uv not found on PATH. Install it from https://docs.astral.sh/uv/" }
-
-# Stop a running copy so its files can be replaced.
-Get-CimInstance Win32_Process -Filter "Name='pythonw.exe' or Name='python.exe' or Name='logimxplusw.exe'" |
-    Where-Object { $_.CommandLine -match 'logimxplus' } |
+# Stop any running copy (including older Python-based installs) so files can be replaced.
+Get-CimInstance Win32_Process |
+    Where-Object { $_.Name -eq 'LogiMxPlus.exe' -or $_.Name -eq 'logimxplusw.exe' -or
+                   ($_.Name -like 'python*' -and $_.CommandLine -match 'logimxplus') } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
-& $uv tool install --python 3.12 --force --reinstall $Source
-if ($LASTEXITCODE -ne 0) { throw "uv tool install failed ($LASTEXITCODE)" }
+# Remove an older uv-based install, if present.
+$uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
+if ($uv -and ((& $uv tool list 2>$null) -match '^logimxplus ')) {
+    & $uv tool uninstall logimxplus | Out-Null
+}
 
-$bin = (& $uv tool dir --bin).Trim()
-$env:PATH = "$bin;$env:PATH"  # so the login entry uses the named logimxplusw.exe launcher
-& (Join-Path $bin "logimxplus.exe") install
-if ($LASTEXITCODE -ne 0) { throw "logimxplus install failed ($LASTEXITCODE)" }
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+if ($Exe) {
+    Copy-Item -Path $Exe -Destination $target -Force
+} else {
+    $url = "https://github.com/ShawnMWilliams/LogiMxPlus/releases/latest/download/LogiMxPlus.exe"
+    Invoke-WebRequest -Uri $url -OutFile $target -UseBasicParsing
+}
 
-# Start it now; it shows in Task Manager as logimxplusw.exe.
-Start-Process -FilePath (Join-Path $bin "logimxplusw.exe") -ArgumentList "run" -WindowStyle Hidden
+# Register the login entry (it points at $target), then start it now.
+Start-Process -FilePath $target -ArgumentList "install" -Wait -WindowStyle Hidden
+Start-Process -FilePath $target -ArgumentList "run" -WindowStyle Hidden
 $cmd = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run").LogiMxPlus
-Write-Output "LogiMxPlus installed and started. Login entry: $cmd"
+Write-Output "LogiMxPlus installed to $target and started. Login entry: $cmd"

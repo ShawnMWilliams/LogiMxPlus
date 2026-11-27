@@ -1,6 +1,6 @@
 [project]
 name = "logimxplus"
-version = "0.1.0"
+version = "0.2.0"
 description = "Make a Logitech MX mouse follow your MX keyboard's Easy-Switch keys."
 readme = "README.md"
 requires-python = ">=3.12"
