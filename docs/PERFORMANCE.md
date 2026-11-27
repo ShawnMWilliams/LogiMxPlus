@@ -18,7 +18,7 @@ the same machine (Easy-Switch 1 on an MX Keys S moved an MX Master 3S to channel
 | Working set (incl. shared DLLs) | 30.7 MB | 5.2 MB | 6× less |
 | Threads | 8 | 3 | −63% |
 | Executable size | 8.5 MB | **0.48 MB** | **17× smaller** |
-| Task Manager "Memory" right after start (private working set) | 13.4 MB (12.5 + 0.9) | **0.12 MB** (v0.3.1) | **~100× less** |
+| Task Manager "Memory" in normal use (private working set) | 13.4 MB (12.5 + 0.9) | **~0.36–0.4 MB** | **~33× less** |
 | Unpacks to `%TEMP%` on every start | yes (Python runtime) | **no** | — |
 | Needs anything installed | no (Python bundled) | no | — |
 | Press → mouse leaves | ~0.8 s | ~0.8 s | same (radio-bound) |
@@ -39,7 +39,16 @@ The versions measured:
   (Rust) window, plus `PrivateMemorySize64`, `WorkingSet64` and the thread count.
   Python figures are the sum of its two processes.
 - **Task Manager agrees:** it showed the Python version as two LogiMxPlus rows (12.5 MB +
-  0.9 MB) and the Rust version as a single row.
+  0.9 MB) and the Rust version as a single row of about 0.4 MB, on both of the user's
+  machines.
+- **Which memory number to trust:**
+  - **Private memory** (committed) is the program's real footprint: what Windows has
+    reserved for it. It's the most stable figure, so the headline "18× less" uses it.
+  - **Task Manager's "Memory"** (private working set) is the part currently held in RAM.
+    It moves: Windows trims it when the program is idle, and it grows back when the
+    program does work. The Rust figure above (~0.36 MB measured, ~0.4 MB seen in Task
+    Manager) was taken after 14 minutes and 77 device events (switches, reconnects,
+    re-arming the keyboard), which is normal use.
 
 ## Why it improved
 
@@ -65,14 +74,15 @@ here, so the comparison is honest.
 4. **No startup unpacking.** The Python exe extracted its runtime to `%TEMP%\_MEI…` on
    every launch. The Rust exe just runs.
 5. **Hands its start-up memory back (v0.3.1).** Finding and setting up devices touches
-   some memory once. After that the program calls `SetProcessWorkingSetSize(-1, -1)`,
-   so Task Manager shows the steady-state figure straight away:
-   - **v0.3.0:** about 0.65 MB for a fresh start, drifting down to about 0.33 MB as
-     Windows trimmed it.
-   - **v0.3.1:** about 0.12 MB from the start.
-
-   The committed memory (~0.9 MB) is unchanged; this only stops holding pages it no
-   longer touches.
+   some memory once. After start-up the program calls `SetProcessWorkingSetSize(-1, -1)`.
+   - **Effect:** Task Manager shows about 0.12 MB right after start instead of about
+     0.65 MB.
+   - **Not the steady-state number:** once the program starts handling switches and
+     reconnects, the pages it really needs come back, and it settles at about 0.36–0.4 MB.
+     That's the honest everyday figure, and it's the one in the table.
+   - **No further trimming:** trimming repeatedly would only make Task Manager look
+     smaller while making every switch fetch those pages again.
+   - **Committed memory is unchanged** at about 0.9 MB.
 
 ### From the redesign (done during the port, and possible in either language)
 
