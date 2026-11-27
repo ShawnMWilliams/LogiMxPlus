@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1: stays running when its terminal closes (2026-11-27)
+
+- **Fix:** `LogiMxPlus.exe run` started from a PowerShell window no longer attaches to
+  that window's console. Before, closing the window ended LogiMxPlus, because Windows
+  stops every process attached to a console when it closes. Starting at sign-in was not
+  affected. Only printing commands (`status`, `config`, …) and `-v run` attach now.
+- **Lower memory:** start-up memory is handed back right after start-up. Task Manager
+  shows about 0.12 MB at once, instead of about 0.65 MB drifting down to about 0.33 MB.
+- **Docs:** the README has an install without git.
+
 ## 0.3.0: Rust rewrite (2026-11-27) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.0)
 
 - Rewritten in Rust. One 0.48 MB native exe with no runtime: 18× less memory, 17×

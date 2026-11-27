@@ -18,6 +18,7 @@ the same machine (Easy-Switch 1 on an MX Keys S moved an MX Master 3S to channel
 | Working set (incl. shared DLLs) | 30.7 MB | 5.2 MB | 6× less |
 | Threads | 8 | 3 | −63% |
 | Executable size | 8.5 MB | **0.48 MB** | **17× smaller** |
+| Task Manager "Memory" right after start (private working set) | 13.4 MB (12.5 + 0.9) | **0.12 MB** (v0.3.1) | **~100× less** |
 | Unpacks to `%TEMP%` on every start | yes (Python runtime) | **no** | — |
 | Needs anything installed | no (Python bundled) | no | — |
 | Press → mouse leaves | ~0.8 s | ~0.8 s | same (radio-bound) |
@@ -63,6 +64,15 @@ here, so the comparison is honest.
      of private memory.
 4. **No startup unpacking.** The Python exe extracted its runtime to `%TEMP%\_MEI…` on
    every launch. The Rust exe just runs.
+5. **Hands its start-up memory back (v0.3.1).** Finding and setting up devices touches
+   some memory once. After that the program calls `SetProcessWorkingSetSize(-1, -1)`,
+   so Task Manager shows the steady-state figure straight away:
+   - **v0.3.0:** about 0.65 MB for a fresh start, drifting down to about 0.33 MB as
+     Windows trimmed it.
+   - **v0.3.1:** about 0.12 MB from the start.
+
+   The committed memory (~0.9 MB) is unchanged; this only stops holding pages it no
+   longer touches.
 
 ### From the redesign (done during the port, and possible in either language)
 

@@ -105,25 +105,56 @@ Notes:
 `LogiMxPlus.exe` needs only 64-bit Windows 10 or 11. It talks to the receiver through
 Windows' built-in HID driver.
 
-**Quickest:** from a regular PowerShell window, run:
+### Install without git (recommended)
+
+You only need the exe, not the repository. Open a regular **PowerShell** window and run
+these four commands. They also work for upgrading an existing install.
+
+1. Stop any running copy and make the install folder:
+
+   ```powershell
+   Stop-Process -Name LogiMxPlus -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\Programs\LogiMxPlus" | Out-Null
+   ```
+
+2. Download the latest release:
+
+   ```powershell
+   Invoke-WebRequest https://github.com/ShawnMWilliams/LogiMxPlus/releases/latest/download/LogiMxPlus.exe -OutFile "$env:LOCALAPPDATA\Programs\LogiMxPlus\LogiMxPlus.exe"
+   ```
+
+3. Start it automatically at sign-in:
+
+   ```powershell
+   Start-Process "$env:LOCALAPPDATA\Programs\LogiMxPlus\LogiMxPlus.exe" -ArgumentList install -Wait
+   ```
+
+4. Start it now:
+
+   ```powershell
+   Start-Process "$env:LOCALAPPDATA\Programs\LogiMxPlus\LogiMxPlus.exe" -ArgumentList run
+   ```
+
+Notes:
+
+- **You can close the PowerShell window afterwards.** LogiMxPlus keeps running in the
+  background (fixed in 0.3.1).
+- **Download it with PowerShell, as above.** A browser marks the file as "from the
+  internet", and Windows SmartScreen then warns about the unsigned exe the first time:
+  click **More info → Run anyway**, or run `Unblock-File` on it.
+
+### Install with the script
+
+If you've cloned the repository, `scripts\install-windows.ps1` does the same four steps.
+It also removes older Python-based installs.
 
 ```powershell
-git clone https://github.com/ShawnMWilliams/LogiMxPlus
-powershell -ExecutionPolicy Bypass -File .\LogiMxPlus\scripts\install-windows.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
 ```
 
-That downloads `LogiMxPlus.exe` from the
-[latest release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/latest) and installs
-it.
-
-To install a specific exe instead, pass `-Exe <path-to>\LogiMxPlus.exe`. You can get one
-in three ways:
-
-- Download it by hand from [Releases](https://github.com/ShawnMWilliams/LogiMxPlus/releases).
-- Take the `LogiMxPlus-windows` artifact from a
-  [CI run](https://github.com/ShawnMWilliams/LogiMxPlus/actions).
-- Build it yourself with `cargo build --release`. The exe is written to
-  `target\release\logimxplus.exe`.
+Without arguments it downloads the latest release. Pass `-Exe <path>` to install a
+specific exe: one downloaded from
+[Releases](https://github.com/ShawnMWilliams/LogiMxPlus/releases), a CI artifact, or your
+own `cargo build --release` (`target\release\logimxplus.exe`).
 
 The script does the following:
 
