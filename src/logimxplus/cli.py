@@ -114,6 +114,8 @@ def cmd_status(_: argparse.Namespace) -> int:
                     continue
                 line = f"  [{index}] {dev.name} ({dev.kind.name.lower()})"
                 with contextlib.suppress(HidppError):
+                    line += f"  firmware {dev.firmware()}"
+                with contextlib.suppress(HidppError):
                     info = dev.host_info()
                     line += f"  host channel {info.current + 1} of {info.count}"
                 with contextlib.suppress(HidppError):

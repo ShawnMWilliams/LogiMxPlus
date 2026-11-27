@@ -66,6 +66,15 @@ class HidppDevice:
             self.kind = DeviceKind.UNKNOWN
         return self
 
+    def firmware(self) -> str:
+        """Main application firmware version, e.g. ``RBK81.02_B0017``."""
+        idx = self._require(Feature.DEVICE_FW_VERSION)
+        for entity in range(self._req(idx, 0)[0]):
+            info = self._req(idx, 1, bytes([entity]))
+            if info[0] == 0:  # 0 = main application
+                return hidpp.format_firmware(info)
+        raise HidppError(f"{self!r} reports no main firmware")
+
     def host_info(self) -> HostInfo:
         r = self._req(self._require(Feature.CHANGE_HOST), hidpp.CHANGE_HOST_GET_INFO)
         return HostInfo(count=r[0], current=r[1])

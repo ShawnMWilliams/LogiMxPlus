@@ -59,6 +59,11 @@ def test_set_analytics_params_does_not_touch_divert() -> None:
     assert hidpp.set_analytics_params(0xD3, False)[5] == 0x02
 
 
+def test_format_firmware() -> None:
+    reply = bytes([0x00]) + b"RBK" + bytes([0x81, 0x02, 0x00, 0x17]) + bytes(8)
+    assert hidpp.format_firmware(reply) == "RBK81.02_B0017"
+
+
 def test_analytics_enabled_from_reporting_reply() -> None:
     assert hidpp.analytics_enabled(bytes([0, 0xD1, 0, 0, 0, 1]))
     assert not hidpp.analytics_enabled(bytes([0, 0xD1, 0, 0, 0, 0]))

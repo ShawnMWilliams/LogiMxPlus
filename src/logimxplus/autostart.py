@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import plistlib
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +15,11 @@ LAUNCH_AGENT_LABEL = "tech.logimxplus.agent"
 def launch_command() -> list[str]:
     exe = Path(sys.executable)
     if sys.platform == "win32":
+        # Prefer the windowless launcher installed with the package, so Task Manager
+        # lists the process as "logimxplusw.exe" rather than a generic "Python".
+        launcher = shutil.which("logimxplusw")
+        if launcher:
+            return [launcher, "run"]
         pythonw = exe.with_name("pythonw.exe")
         if pythonw.exists():
             exe = pythonw

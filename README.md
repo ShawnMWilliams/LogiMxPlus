@@ -4,24 +4,63 @@ Press an **Easy-Switch** key on your Logitech **MX Keys S** and your **MX Master
 mouse switches to the same computer. No more lifting the mouse to press the button
 underneath it.
 
-Works over a **Logi Bolt** USB receiver and over Bluetooth, on Windows, macOS and Linux.
+No Logitech software, no network, nothing extra running on the devices. It works over a
+**Logi Bolt** USB receiver. Bluetooth, macOS and Linux are supported in code but not yet
+tested (see below).
+
+## Tested hardware
+
+Verified end to end on 2026-11-27. Pressing Easy-Switch 1 on the keyboard moved the
+mouse to channel 1, with no mouse interaction.
+
+| Device | Model / ID | Firmware tested | Result |
+|---|---|---|---|
+| Keyboard | Logitech **MX Keys S** (Bolt wireless ID `B378`) | **`RBK81.02_B0017`** (Logitech's "81.2.17") | ✅ Works |
+| Keyboard | Logitech MX Keys S | `RBK81.01_B0015` | ❌ Too old: sends no signal before switching |
+| Mouse | Logitech **MX Master 3S** (Bolt wireless ID `B034`) | `RBM22.02_B0009` | ✅ Works, no update needed |
+| Receiver | **Logi Bolt** USB receiver (`046D:C548`) | — | ✅ Both devices paired to it |
+| Computer | Windows 11 (build 26300), Python 3.12 via uv | — | ✅ |
+
+**Not tested yet:**
+
+- **Bluetooth.** Handled in code: HID usage page `FF43`.
+- **macOS and Linux.** Handled in code.
+- **Other keyboards.** The original MX Keys reports key presses differently; LogiMxPlus
+  handles that path too, but no one has tested it on real hardware.
+- **Other mice.** Any mouse with Easy-Switch should accept the switch command.
 
 ## Requirement: keyboard firmware 81.2.17 or newer
 
-The MX Keys S only says where it is going on firmware **81.2.17+** (April 2026, the
-"Enhanced Easy-Switch" update). Older firmware such as `RBK81.01_B0015` switches
-silently, and nothing on the computer can tell which key was pressed.
+The MX Keys S only says where it is going on firmware **81.2.17 / `RBK81.02_B0017`** or
+newer (April 2026, the "Enhanced Easy-Switch" update). Older firmware such as
+`RBK81.01_B0015` switches silently, and nothing on the computer can tell which key was
+pressed. **The mouse needs no firmware update.**
 
-`logimxplus status` shows nothing about firmware. Check the version in Logi Options+.
+Check your versions without Logitech software:
 
-To update:
+```powershell
+logimxplus status
+```
 
-1. Install [Logi Options+](https://www.logitech.com/software/logi-options-plus.html).
-2. Update the keyboard (and the mouse, while you're there).
-3. Optionally, uninstall Options+. The firmware stays on the device.
+It prints something like:
 
-If you keep Options+, leave its own *Enhanced Easy-Switch* toggle **off**. Two programs
-moving the mouse at once fight each other.
+```
+USB Receiver (c548)  receiver
+  [3] MX Master 3S (mouse)  firmware RBM22.02_B0009  host channel 2 of 3
+  [4] MX Keys S (keyboard)  firmware RBK81.02_B0017  host channel 2 of 3  easy-switch reporting 3/3 keys
+```
+
+Logitech publishes this firmware only through Logi Options+, and their older standalone
+updater is discontinued. If you don't want Options+ on your computer, install it on a
+spare machine:
+
+1. Plug the Bolt receiver into the spare machine.
+2. Update the keyboard there.
+3. Uninstall Options+ and bring the receiver back. The firmware stays on the keyboard.
+
+If you keep [Logi Options+](https://www.logitech.com/software/logi-options-plus.html)
+installed, leave its own *Enhanced Easy-Switch* feature **off**. Two programs moving the
+mouse at once fight each other.
 
 ## How it works
 
@@ -64,6 +103,9 @@ logimxplus install     # start automatically at login (no console window)
 
 On Windows, `scripts\install-windows.ps1` does all of that in one step and starts the
 program right away. It takes `-Source <path>` to install from a local checkout.
+
+**Is it running?** In Task Manager it appears as **`logimxplusw.exe`**, with Python
+worker processes under it. The log's last lines should include `keyboard ready`.
 
 > **Installing from the Claude desktop app's terminal?** Windows quietly redirects that
 > app's AppData writes into its private container. The install would land there, and

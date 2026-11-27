@@ -35,6 +35,7 @@ HIDPP10_ERR_RESOURCE = 0x09
 
 class Feature(IntEnum):
     ROOT = 0x0000
+    DEVICE_FW_VERSION = 0x0003
     DEVICE_NAME = 0x0005
     CHANGE_HOST = 0x1814
     HOSTS_INFO = 0x1815
@@ -173,6 +174,16 @@ def analytics_events(data: bytes) -> list[tuple[int, int]]:
             break
         out.append((cid, data[i + 2]))
     return out
+
+
+def format_firmware(fw_info_reply: bytes) -> str:
+    """Decode 0x0003 getFwInfo: type, 3-char prefix, BCD number, BCD revision, build (BE).
+
+    Example: ``RBK81.02_B0017``.
+    """
+    prefix = fw_info_reply[1:4].decode("ascii", "replace").strip("\x00 ")
+    return (f"{prefix}{fw_info_reply[4]:02X}.{fw_info_reply[5]:02X}"
+            f"_B{fw_info_reply[6]:02X}{fw_info_reply[7]:02X}")
 
 
 def analytics_enabled(reporting_reply: bytes) -> bool:
