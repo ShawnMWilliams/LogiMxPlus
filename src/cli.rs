@@ -33,25 +33,38 @@ Options:
   -v, --verbose  debug logging (every HID++ report)
   --version      print the version";
 
+/// Only commands that print should borrow the terminal they were started from.
+/// Windows ends every process attached to a console when its window closes, so the
+/// background `run` must stay detached, or closing the PowerShell window that started
+/// it would kill it. `-v run` is a foreground debug session, so it attaches.
+fn wants_console(command: &str, verbose: bool) -> bool {
+    command != "run" || verbose
+}
+
 pub fn main() -> ExitCode {
-    platform::init_console();
     let mut verbose = false;
     let mut words = Vec::new();
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "-v" | "--verbose" => verbose = true,
             "--version" | "-V" => {
+                platform::init_console();
                 out!("{}", env!("CARGO_PKG_VERSION"));
                 return ExitCode::SUCCESS;
             }
             "-h" | "--help" | "help" => {
+                platform::init_console();
                 out!("{USAGE}");
                 return ExitCode::SUCCESS;
             }
             _ => words.push(arg),
         }
     }
-    let code = match words.first().map(String::as_str).unwrap_or("run") {
+    let command = words.first().map(String::as_str).unwrap_or("run");
+    if wants_console(command, verbose) {
+        platform::init_console();
+    }
+    let code = match command {
         "run" => run(verbose),
         "status" => status(),
         "switch" => match words
@@ -223,5 +236,23 @@ fn config_cmd() -> u8 {
             out!("cannot write {}: {e}", path.display());
             1
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wants_console;
+
+    #[test]
+    fn background_run_never_attaches_to_a_console() {
+        assert!(!wants_console("run", false));
+    }
+
+    #[test]
+    fn printing_commands_and_foreground_debug_attach() {
+        for cmd in ["status", "switch", "install", "uninstall", "config", "bogus"] {
+            assert!(wants_console(cmd, false), "{cmd}");
+        }
+        assert!(wants_console("run", true));
     }
 }
