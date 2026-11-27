@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0: Rust rewrite (2026-11-27)
+## 0.3.0: Rust rewrite (2026-11-27) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.0)
 
 - Rewritten in Rust. One 0.48 MB native exe with no runtime: 18× less memory, 17×
   smaller, no measurable idle CPU, and one process instead of two. See

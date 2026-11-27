@@ -105,17 +105,25 @@ Notes:
 `LogiMxPlus.exe` needs only 64-bit Windows 10 or 11. It talks to the receiver through
 Windows' built-in HID driver.
 
-1. Get `LogiMxPlus.exe` in one of two ways:
-   - Download the `LogiMxPlus-windows` artifact from the latest successful
-     [CI run](https://github.com/ShawnMWilliams/LogiMxPlus/actions).
-   - Build it yourself: `cargo build --release` (needs the Rust toolchain). The exe is
-     written to `target\release\logimxplus.exe`.
-2. From a regular PowerShell window, run:
+**Quickest:** from a regular PowerShell window, run:
 
-   ```powershell
-   git clone https://github.com/ShawnMWilliams/LogiMxPlus
-   powershell -ExecutionPolicy Bypass -File .\LogiMxPlus\scripts\install-windows.ps1 -Exe <path-to>\logimxplus.exe
-   ```
+```powershell
+git clone https://github.com/ShawnMWilliams/LogiMxPlus
+powershell -ExecutionPolicy Bypass -File .\LogiMxPlus\scripts\install-windows.ps1
+```
+
+That downloads `LogiMxPlus.exe` from the
+[latest release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/latest) and installs
+it.
+
+To install a specific exe instead, pass `-Exe <path-to>\LogiMxPlus.exe`. You can get one
+in three ways:
+
+- Download it by hand from [Releases](https://github.com/ShawnMWilliams/LogiMxPlus/releases).
+- Take the `LogiMxPlus-windows` artifact from a
+  [CI run](https://github.com/ShawnMWilliams/LogiMxPlus/actions).
+- Build it yourself with `cargo build --release`. The exe is written to
+  `target\release\logimxplus.exe`.
 
 The script does the following:
 
@@ -123,8 +131,6 @@ The script does the following:
 - Copies the exe to `%LOCALAPPDATA%\Programs\LogiMxPlus\LogiMxPlus.exe`.
 - Registers it to start at login (an `HKCU\...\Run` entry).
 - Starts it right away.
-
-Without `-Exe`, it downloads `LogiMxPlus.exe` from the latest GitHub release.
 
 **Is it running?** Task Manager lists one **LogiMxPlus** process. The log's last line
 should say `keyboard ready`.
