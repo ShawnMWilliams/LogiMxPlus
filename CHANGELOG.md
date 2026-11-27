@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.1: stays running when its terminal closes (2026-11-27)
+## 0.3.1: stays running when its terminal closes (2026-11-27) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.1)
 
 - **Fix:** `LogiMxPlus.exe run` started from a PowerShell window no longer attaches to
   that window's console. Before, closing the window ended LogiMxPlus, because Windows
