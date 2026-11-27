@@ -44,6 +44,7 @@ class SwitchService:
         self.keyboard: Keyboard | None = None
         self.mouse: SwitchableDevice | None = None
         self._keyboard_host: int | None = None
+        self._mouse_host: int | None = None  # read when the mouse connects, off the hot path
         self._pending: tuple[int, float] | None = None
         self._last_press: tuple[int, float] | None = None
 
@@ -82,6 +83,10 @@ class SwitchService:
     def mouse_connected(self, mouse: SwitchableDevice) -> None:
         with self._lock:
             self.mouse = mouse
+            try:
+                self._mouse_host = mouse.host_info().current
+            except HidppError:
+                self._mouse_host = None
             slot = self.pending_slot
             self._pending = None
             if slot is not None:
@@ -125,14 +130,12 @@ class SwitchService:
             log.info("mouse not connected here; switch to channel %d is pending", slot + 1)
             self._pending = (slot, self._clock())
             return
+        if self._mouse_host == slot:
+            log.info("mouse already on channel %d", slot + 1)
+            return
         try:
-            try:
-                if mouse.host_info().current == slot:
-                    log.info("mouse already on channel %d", slot + 1)
-                    return
-            except HidppError:
-                pass  # asleep or slow; try the switch anyway
             mouse.change_host(slot)
+            self._mouse_host = slot
             log.info("mouse sent to channel %d", slot + 1)
         except DeviceUnreachable as exc:
             log.info("mouse unreachable (%s); switch to channel %d is pending", exc, slot + 1)

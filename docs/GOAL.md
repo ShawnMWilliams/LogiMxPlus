@@ -23,6 +23,18 @@ and explicit constraints. Work is done when every criterion below passes.
 | G6 | Starts automatically at login with no console window, on Windows and macOS. | `logimxplus install`, then sign out/in and see the process + log file. |
 | G7 | Code passes the quality gate. | `uv run ruff check . && uv run mypy && uv run pytest` exits 0. |
 
+## Status (2026-11-27)
+
+| # | Status | Evidence |
+|---|--------|----------|
+| G1 | ✅ Met on this PC (Bolt) | Easy-Switch 1 pressed → `change-host announcement 1 -> 0` → `mouse sent to channel 1`; the mouse acknowledged 0.77 s after the press. The user confirmed the cursor appeared on the channel-1 computer. The hot-path mouse query has since been removed to cut that delay. |
+| G2 | ✅ | The keyboard switched itself in the same test. Nothing was diverted. |
+| G3 | ◐ | Bolt verified. Bluetooth covered by unit test only. |
+| G4 | ✅ | Unit test, plus a live re-arm on keyboard return seen in the log. |
+| G5 | ✅ | Unit tests. |
+| G6 | ⏳ | `logimxplus install` not yet run on the user's machines. |
+| G7 | ✅ | `uv run ruff check . && uv run mypy && uv run pytest` exits 0. |
+
 ## Prerequisite
 
 MX Keys S firmware **81.2.17+**. Older firmware sends no signal before switching (see

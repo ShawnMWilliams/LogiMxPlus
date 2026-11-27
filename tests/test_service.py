@@ -78,6 +78,22 @@ def test_mouse_already_on_target_is_not_switched(clock: Clock) -> None:
     assert mouse.switched_to == []
 
 
+def test_switch_does_not_query_mouse_on_hot_path(clock: Clock) -> None:
+    class Counting(FakeDevice):
+        queries = 0
+
+        def host_info(self) -> HostInfo:
+            Counting.queries += 1
+            return super().host_info()
+
+    svc, mouse = make(clock), Counting(1)
+    svc.keyboard_connected(FakeDevice(1))
+    svc.mouse_connected(mouse)
+    before = Counting.queries
+    svc.easy_switch_pressed(0)
+    assert mouse.switched_to == [0] and Counting.queries == before
+
+
 def test_repeat_press_is_debounced(clock: Clock) -> None:
     svc, mouse = make(clock), FakeDevice(1)
     svc.keyboard_connected(FakeDevice(1))
