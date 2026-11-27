@@ -4,30 +4,39 @@ Press an **Easy-Switch** key on your Logitech **MX Keys S** and your **MX Master
 mouse switches to the same computer. No more lifting the mouse to press the button
 underneath it.
 
-No Logitech software, no network, nothing extra running on the devices. It works over a
-**Logi Bolt** USB receiver. Bluetooth, macOS and Linux are supported in code but not yet
-tested (see below).
+- **Tiny.** One 0.5 MB native program, written in Rust, and nothing else to install.
+- **Idle cost.** Under 1 MB of private memory and no measurable CPU.
+
+> **Rewritten from Python to Rust:** 18× less memory, 17× smaller, no measurable CPU,
+> and one process instead of two. Numbers and reasons are in
+> **[docs/PERFORMANCE.md](docs/PERFORMANCE.md)**.
+- **Self-contained.** No Logitech software, no network, no permanent changes to the
+  devices.
+- **Tested on:** Windows 11 with a Logi Bolt USB receiver.
+- **macOS and Linux:** designed for, but not yet built or tested; see
+  [docs/PLATFORMS.md](docs/PLATFORMS.md).
 
 ## Tested hardware
 
-Verified end to end on 2026-11-27. Pressing Easy-Switch 1 on the keyboard moved the
-mouse to channel 1, with no mouse interaction.
+Verified end to end on 2026-11-27 with both the Rust build and the earlier Python
+prototype. Pressing Easy-Switch 1 on the keyboard moved the mouse to channel 1, with no
+mouse interaction.
 
 | Device | Model / ID | Firmware tested | Result |
 |---|---|---|---|
 | Keyboard | Logitech **MX Keys S** (Bolt wireless ID `B378`) | **`RBK81.02_B0017`** (Logitech's "81.2.17") | ✅ Works |
 | Keyboard | Logitech MX Keys S | `RBK81.01_B0015` | ❌ Too old: sends no signal before switching |
 | Mouse | Logitech **MX Master 3S** (Bolt wireless ID `B034`) | `RBM22.02_B0009` | ✅ Works, no update needed |
-| Receiver | **Logi Bolt** USB receiver (`046D:C548`) | — | ✅ Both devices paired to it |
-| Computer | Windows 11 (build 26300), Python 3.12 via uv | — | ✅ |
+| Receiver | **Logi Bolt** USB receiver (`046D:C548`) | n/a | ✅ Both devices paired to it |
+| Computer | Windows 11 (build 26300), x64 | n/a | ✅ |
 
 **Not tested yet:**
 
-- **Bluetooth.** Handled in code: HID usage page `FF43`.
-- **macOS and Linux.** Handled in code.
-- **Other keyboards.** The original MX Keys reports key presses differently; LogiMxPlus
-  handles that path too, but no one has tested it on real hardware.
-- **Other mice.** Any mouse with Easy-Switch should accept the switch command.
+- **Bluetooth.** Handled in code (HID usage page `FF43`).
+- **macOS and Linux.** Code paths exist; see [docs/PLATFORMS.md](docs/PLATFORMS.md).
+- **Other keyboards.** The original MX Keys reports key presses a different way, and
+  LogiMxPlus handles that too, but it hasn't been tested on real hardware.
+- **Other mice.** Any Logitech mouse with Easy-Switch should accept the switch command.
 
 ## Requirement: keyboard firmware 81.2.17 or newer
 
@@ -39,7 +48,7 @@ pressed. **The mouse needs no firmware update.**
 Check your versions without Logitech software:
 
 ```powershell
-logimxplus status
+LogiMxPlus.exe status
 ```
 
 It prints something like:
@@ -73,8 +82,8 @@ channel.
 ```
 press Easy-Switch 1 on computer B
   keyboard ──(0x1814 notice: leaving 2 for 1)──▶ LogiMxPlus on B
-  keyboard ──switches itself to channel 1 (~1 s later)
-  LogiMxPlus on B ──CHANGE_HOST(channel 1)──▶ mouse ──▶ computer A
+  keyboard ──switches itself to channel 1
+  LogiMxPlus on B ──CHANGE_HOST(channel 1)──▶ mouse ──▶ computer A   (~0.8 s after the press)
 ```
 
 For keyboards that report key presses instead, such as the original MX Keys, LogiMxPlus
@@ -91,28 +100,34 @@ Notes:
 - **If the mouse is asleep** when you press the key, the switch is held for up to two
   minutes and applied the moment the mouse wakes up. Nudge the mouse and it follows.
 
-## Install
+## Install (Windows)
 
-### Windows: standalone `LogiMxPlus.exe` (no Python needed)
+`LogiMxPlus.exe` needs only 64-bit Windows 10 or 11. It talks to the receiver through
+Windows' built-in HID driver.
 
-`LogiMxPlus.exe` is a single file of about 8.5 MB with Python bundled inside. Nothing
-else needs to be installed.
+1. Get `LogiMxPlus.exe` in one of two ways:
+   - Download the `LogiMxPlus-windows` artifact from the latest successful
+     [CI run](https://github.com/ShawnMWilliams/LogiMxPlus/actions).
+   - Build it yourself: `cargo build --release` (needs the Rust toolchain). The exe is
+     written to `target\release\logimxplus.exe`.
+2. From a regular PowerShell window, run:
 
-To install it for your user, start it at login, and start it now, run this from a
-regular PowerShell window:
+   ```powershell
+   git clone https://github.com/ShawnMWilliams/LogiMxPlus
+   powershell -ExecutionPolicy Bypass -File .\LogiMxPlus\scripts\install-windows.ps1 -Exe <path-to>\logimxplus.exe
+   ```
 
-```powershell
-git clone https://github.com/ShawnMWilliams/LogiMxPlus
-powershell -ExecutionPolicy Bypass -File .\LogiMxPlus\scripts\install-windows.ps1 -Exe <path-to>\LogiMxPlus.exe
-```
+The script does the following:
 
-- **Where it goes:** `%LOCALAPPDATA%\Programs\LogiMxPlus\LogiMxPlus.exe`.
-- **Without `-Exe`:** the script downloads `LogiMxPlus.exe` from the latest GitHub release.
-- **Build it yourself:** `scripts\build-exe.ps1` (needs uv) writes `dist\LogiMxPlus.exe`.
-  CI also builds it on every push, as a downloadable artifact.
+- Stops any running copy, including the older Python-based version.
+- Copies the exe to `%LOCALAPPDATA%\Programs\LogiMxPlus\LogiMxPlus.exe`.
+- Registers it to start at login (an `HKCU\...\Run` entry).
+- Starts it right away.
 
-**Is it running?** Task Manager lists it as **LogiMxPlus** (two entries: a small launcher
-and the program itself). The log's last line should say `keyboard ready`.
+Without `-Exe`, it downloads `LogiMxPlus.exe` from the latest GitHub release.
+
+**Is it running?** Task Manager lists one **LogiMxPlus** process. The log's last line
+should say `keyboard ready`.
 
 > **Installing from the Claude desktop app's terminal?** Windows quietly redirects that
 > app's AppData writes into its private container. The install would land there, and the
@@ -127,47 +142,22 @@ Stop-Process -Name LogiMxPlus
 Remove-Item -Recurse "$env:LOCALAPPDATA\Programs\LogiMxPlus"
 ```
 
-### macOS / Linux (or Windows from source)
-
-You need [uv](https://docs.astral.sh/uv/):
-
-```powershell
-uv tool install git+https://github.com/ShawnMWilliams/LogiMxPlus
-logimxplus install
-```
-
-The second command makes it start at login.
-
 ### Commands
-
-On Windows, run these as `LogiMxPlus.exe <command>`; with the uv install, use
-`logimxplus <command>`.
 
 | Command | What it does |
 |---|---|
-| `status` | List devices, their firmware, their current channel, and whether Easy-Switch reporting is armed |
-| `-v run` | Run in the foreground with debug logging (`run` with no options is what login starts) |
-| `switch N` | Switch the mouse and keyboard to channel N now (handy for a hotkey) |
-| `config` | Create the config file and print its path |
-| `install` / `uninstall` | Add or remove the login entry |
+| `LogiMxPlus.exe status` | List devices, their firmware, their current channel, and whether Easy-Switch reporting is armed |
+| `LogiMxPlus.exe -v run` | Run in the foreground with trace logging of every HID++ report. Plain `run` is what login starts. |
+| `LogiMxPlus.exe switch N` | Switch the mouse and keyboard to channel N now (handy for a hotkey) |
+| `LogiMxPlus.exe config` | Create the config file and print its path and the login entry |
+| `LogiMxPlus.exe install` / `uninstall` | Add or remove the login entry |
 
-Logs: `%APPDATA%\LogiMxPlus\logimxplus.log` (Windows),
-`~/Library/Application Support/LogiMxPlus/` (macOS), `~/.config/logimxplus/` (Linux).
-
-### macOS
-
-Grant **Input Monitoring** to the Python that runs LogiMxPlus (installed with uv) (System Settings → Privacy &
-Security → Input Monitoring). Otherwise macOS hides the HID++ interface.
-
-### Linux
-
-Your user needs read/write access to `/dev/hidraw*` for Logitech devices. The udev rules
-shipped with Solaar work.
+The log is at `%APPDATA%\LogiMxPlus\logimxplus.log`.
 
 ## Configuration
 
 If you paired each computer to the **same channel number** on both devices, you need no
-configuration. Otherwise run `logimxplus config` and edit `[channels]`:
+configuration. Otherwise run `LogiMxPlus.exe config` and edit `[channels]`:
 
 ```toml
 [channels]
@@ -176,6 +166,28 @@ configuration. Otherwise run `logimxplus config` and edit `[channels]`:
 2 = 3
 3 = 2
 ```
+
+## Efficiency
+
+Measured on the test machine, idle, over 60 seconds:
+
+| | Python prototype | **Rust** |
+|---|---|---|
+| Processes | 2 | **1** |
+| CPU | ~94 ms per minute (0.16% of a core) | **0 ms** |
+| Private memory | 16.3 MB | **0.89 MB** |
+| Exe size | 8.5 MB | **0.48 MB** |
+
+The full comparison, how it was measured, and which gains came from the language versus
+the redesign are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+
+Why it's this cheap:
+
+- **No polling.** The HID reader threads block in the kernel until the receiver sends a
+  report, and the main loop sleeps on a channel.
+- **Rare rescans.** It looks for new devices only when nothing is open (every 5 s), and
+  otherwise once a minute.
+- **Narrow enumeration.** Enumeration is limited to Logitech devices.
 
 ## Logi Options+
 
@@ -190,27 +202,32 @@ LogiMxPlus doesn't need Options+.
 ## Development
 
 ```powershell
-uv sync
-uv run ruff check . ; uv run mypy ; uv run pytest
+cargo fmt --check ; cargo clippy --all-targets -- -D warnings ; cargo test
+cargo build --release
 ```
 
-Layout (`src/logimxplus`):
+Layout (`src/`):
 
 | Module | Layer | Role |
 |---|---|---|
-| `domain.py` | Domain | Types, Easy-Switch CIDs, errors |
-| `hidpp.py` | Domain | Pure HID++ encode/decode (no I/O) |
-| `transport.py` | Gateway | hidapi transport: request/reply matching, notifications, discovery |
-| `devices.py` | Gateway | One HID++ 2.0 device: features, host info, change host, reporting |
-| `service.py` | Service | When and where the mouse switches (debounce, pending, mapping) |
-| `runtime.py` | Composition root | Finds devices, re-arms on reconnect, routes events to the service |
-| `cli.py`, `autostart.py` | Entry | CLI and login-item install |
+| `domain.rs` | Domain | Types, Easy-Switch CIDs, errors |
+| `hidpp.rs` | Domain | Pure HID++ encode/decode (no I/O) |
+| `transport.rs` | Gateway | hidapi transport: blocking readers, request/reply matching, discovery |
+| `device.rs` | Gateway | One HID++ 2.0 device: features, firmware, host info, change host, reporting |
+| `service.rs` | Service | When and where the mouse switches (debounce, pending, mapping) |
+| `runtime.rs` | Composition root | Event loop; finds devices, re-arms on reconnect, routes events |
+| `cli.rs`, `config.rs`, `logging.rs`, `platform.rs` | Edges | CLI, TOML config, file log, OS integration |
 
-Goal and success criteria: [docs/GOAL.md](docs/GOAL.md). Protocol notes:
-[docs/PROTOCOL.md](docs/PROTOCOL.md).
+Other docs:
+
+- [docs/GOAL.md](docs/GOAL.md): the goal and its success criteria.
+- [docs/PROTOCOL.md](docs/PROTOCOL.md): protocol notes.
+- [docs/PLATFORMS.md](docs/PLATFORMS.md): what macOS and Linux still need.
+- `python/`: the original Python prototype, kept for reference.
 
 Prior art worth reading: [CleverSwitch](https://github.com/MikalaiBarysevich/CleverSwitch)
-(same idea), [Solaar](https://github.com/pwr-Solaar/Solaar), [logiops](https://github.com/PixlOne/logiops).
+(same idea), [Solaar](https://github.com/pwr-Solaar/Solaar), and
+[logiops](https://github.com/PixlOne/logiops).
 
 ## License
 
