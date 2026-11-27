@@ -66,10 +66,30 @@ This matches CleverSwitch issue
 **Firmware 81.2.17+ (Enhanced Easy-Switch): an announcement before leaving.**
 
 - On an Easy-Switch press the keyboard sends `11 DI FI(0x1814) 00 cur tgt ...` to the host
-  it is leaving, roughly 1 s before the link drops. `cur` and `tgt` are zero-based.
+  it is leaving, just before the link drops: about 30 ms on our hardware (see below;
+  CleverSwitch reports up to about 1 s). `cur` and `tgt` are zero-based.
 - No enabling step is needed. Analytics events still never arrive.
 - Sources: CleverSwitch issues
   [#102](https://github.com/MikalaiBarysevich/CleverSwitch/issues/102) and #113, and
   [Logitech release notes](https://support.logi.com/hc/en-us/articles/39066494614423-MX-Keys-S-Firmware-Release-Notes).
 
 LogiMxPlus handles both the 0x1814 announcement and 0x1B04 analytics events.
+
+### Confirmed on hardware with firmware `RBK81.02_B0017` (2026-11-27)
+
+- **The keyboard's feature version changed.** On the old firmware the keyboard reports
+  0x1814 as version **1**. On the new firmware it reports version **2**. The mouse
+  (`RBM22.02_B0009`) stays at version 1 and needs nothing new.
+- **The announcement arrives about 30 ms before the link drops.**
+  - Pressing Easy-Switch 1 while on host 2 produced the raw report
+    `11 04 0a 00 01 00 …`: device 4 (the keyboard), feature index 10 (0x1814), function
+    0, `[current 1, target 0]`.
+  - The receiver's link-down report for the keyboard, `10 04 41 10 41 78 b3`, followed
+    about 30 ms later.
+- **The mouse may or may not acknowledge.** In one run it answered `setCurrentHost`
+  (`11 03 0a 1b …`) about 770 ms after the press, when the radio was free again. In
+  another it dropped the link without replying. The code treats a timeout as success.
+- **The mouse leaves 0.66–0.8 s after the press.** The rest is radio time, as the
+  keyboard's own switch clears the receiver.
+- **0x1B04 analytics events never arrive on the MX Keys S, on either firmware.** The
+  feature accepts the setting and still sends nothing.

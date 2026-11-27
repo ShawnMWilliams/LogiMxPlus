@@ -19,8 +19,9 @@ underneath it.
 ## Tested hardware
 
 Verified end to end on 2026-11-27 with both the Rust build and the earlier Python
-prototype. Pressing Easy-Switch 1 on the keyboard moved the mouse to channel 1, with no
-mouse interaction.
+prototype. With LogiMxPlus on two Windows PCs, Easy-Switch moved the mouse with the
+keyboard **in both directions**, with no mouse interaction. It also started by itself
+after a restart.
 
 | Device | Model / ID | Firmware tested | Result |
 |---|---|---|---|
@@ -225,6 +226,28 @@ Why it's this cheap:
 - **Rare rescans.** It looks for new devices only when nothing is open (every 5 s), and
   otherwise once a minute.
 - **Narrow enumeration.** Enumeration is limited to Logitech devices.
+
+## Known limitations
+
+- **A computer at its sign-in screen can't send the mouse away.** LogiMxPlus starts when
+  you sign in. Switching *to* a computer that's at its sign-in screen works, because the
+  computer you're leaving handles it. Switching *away* from a computer that nobody has
+  signed in to yet doesn't move the mouse. Fixing this would mean running LogiMxPlus as a
+  Windows service (see Ideas below).
+- **The exe isn't code-signed.** SmartScreen warns once if you download it with a browser.
+  The PowerShell install avoids this.
+- **Not yet tested:** Bluetooth, macOS, Linux, and keyboards or mice other than the MX
+  Keys S and MX Master 3S.
+- **Logi Options+ may compete.** Options+'s own Enhanced Easy-Switch may move the mouse
+  too. Turn that feature off, or quit Options+.
+
+## Ideas for later
+
+- **Windows service mode.** It would work at the sign-in screen too. It needs an
+  administrator install, and HID access from session 0 needs checking.
+- **macOS and Linux builds.** The checklist is in [docs/PLATFORMS.md](docs/PLATFORMS.md).
+- **Code signing.** It would remove the SmartScreen prompt; a certificate costs money.
+- **A Bluetooth test.** The code path exists (usage page `FF43`) but hasn't been run.
 
 ## Logi Options+
 

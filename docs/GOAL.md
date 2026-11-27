@@ -24,16 +24,16 @@ and explicit constraints. Work is done when every criterion below passes.
 | G7 | Code passes the quality gate. | `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` exits 0. |
 | G8 | Idle cost is negligible: one process, under 2 MB private memory, under 10 ms CPU per minute. | `Get-Process LogiMxPlus` over 60 s (see [PERFORMANCE.md](PERFORMANCE.md)). |
 
-## Status (2026-11-27)
+## Status (2026-11-27, end of first session)
 
 | # | Status | Evidence |
 |---|--------|----------|
-| G1 | ✅ Met on this PC (Bolt), with both the Python prototype and the Rust build | Rust, 15:37:29.577: `Easy-Switch 1 pressed` → `mouse sent to channel 1`, and the mouse left 0.78 s after the press. The user confirmed the cursor appeared on the channel-1 computer. |
+| G1 | ✅ Met (Bolt), in both directions | Rust 0.3.1: Easy-Switch 1 moved the mouse 0.66 s after the press. With LogiMxPlus on both computers, switching back made the channel-1 PC send the mouse back by itself. Confirmed by the user and in the logs. |
 | G2 | ✅ | The keyboard switched itself in the same test. Nothing was diverted. |
 | G3 | ◐ | Bolt verified. Bluetooth covered by unit test only. |
 | G4 | ✅ | Unit test, plus a live re-arm on keyboard return seen in the log. |
 | G5 | ✅ | Unit tests. |
-| G6 | ◐ | This PC: the Rust `LogiMxPlus.exe` is installed with `scripts/install-windows.ps1`, run outside the app container, and starts at login through an HKCU Run entry. Not yet observed across a real sign-out/sign-in. Channel-1 PC: not installed. macOS and Linux: not started. |
+| G6 | ✅ Windows / ⏳ macOS, Linux | Both PCs run v0.3.1 from `%LOCALAPPDATA%\Programs\LogiMxPlus` with an HKCU Run entry. The channel-1 PC was restarted and LogiMxPlus started at sign-in by itself. It keeps running after the terminal that launched it closes (fixed in 0.3.1). macOS and Linux: see [PLATFORMS.md](PLATFORMS.md). |
 | G7 | ✅ | The cargo gate passes (35 tests). The Python reference in `python/` still passes its own gate (39 tests). |
 | G8 | ✅ | 1 process, 0.89 MB private memory, 0 ms CPU in 60 s. |
 
