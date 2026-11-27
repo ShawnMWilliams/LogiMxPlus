@@ -299,10 +299,15 @@ impl<D: Discovery> Runtime<D> {
     pub fn run(&mut self) -> ! {
         log::info!("LogiMxPlus running");
         let mut next_scan = Instant::now();
+        let mut trimmed = false;
         loop {
             let now = Instant::now();
             if now >= next_scan {
                 self.scan(now);
+                if !trimmed {
+                    crate::platform::trim_working_set(); // start-up done: hand pages back
+                    trimmed = true;
+                }
                 next_scan = now
                     + if self.transports.is_empty() {
                         RESCAN_IDLE

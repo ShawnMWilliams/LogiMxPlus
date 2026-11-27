@@ -139,6 +139,22 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
     (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
 
+/// Hand back the memory pages touched during start-up (enumeration, device setup).
+/// Windows trims an idle process like this on its own after a while; doing it once,
+/// right after start-up, gets the low steady-state figure immediately. Pages needed
+/// again later are faulted back in cheaply. No-op off Windows.
+pub fn trim_working_set() {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::Threading::{GetCurrentProcess, SetProcessWorkingSetSize};
+        // SAFETY: the pseudo-handle refers to this process; (-1, -1) asks Windows to
+        // remove as many pages as possible from its working set.
+        unsafe {
+            SetProcessWorkingSetSize(GetCurrentProcess(), usize::MAX, usize::MAX);
+        }
+    }
+}
+
 /// Holds the single-instance lock for the life of the process.
 pub struct InstanceGuard(#[allow(dead_code)] File);
 
