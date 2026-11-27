@@ -33,6 +33,7 @@ class Runtime:
         self.keyboard: HidppDevice | None = None
         self.mouse: HidppDevice | None = None
         self._kb_reprog: int | None = None
+        self._kb_change_host: int | None = None
         self._lock = threading.RLock()
 
     # --- discovery ----------------------------------------------------------------------
@@ -91,6 +92,7 @@ class Runtime:
                 log.info("keyboard: %r", dev)
                 self.keyboard = dev
                 self._kb_reprog = dev.reprog_feature_index()
+                self._kb_change_host = dev.feature_index(Feature.CHANGE_HOST)
                 self.service.keyboard_connected(dev)
             elif dev.kind in (DeviceKind.MOUSE, DeviceKind.TRACKBALL, DeviceKind.TRACKPAD) \
                     and self._matches(dev, self.config.mouse_name) \
@@ -117,6 +119,14 @@ class Runtime:
 
     def _on_notification(self, t: Transport, msg: hidpp.Message) -> None:
         kb = self.keyboard
+        if kb and kb.transport is t and msg.device == kb.index \
+                and msg.sub_id == self._kb_change_host and msg.func == hidpp.CHANGE_HOST_EVENT:
+            # Newer firmware (Enhanced Easy-Switch) announces the switch on 0x1814:
+            # payload [host it is leaving, target host], both zero-based.
+            if len(msg.data) >= 2 and msg.data[1] < 3:
+                log.debug("change-host announcement %d -> %d", msg.data[0], msg.data[1])
+                self.service.easy_switch_pressed(msg.data[1])
+            return
         if kb and kb.transport is t and msg.device == kb.index \
                 and msg.sub_id == self._kb_reprog and msg.func == hidpp.REPROG_EVENT_ANALYTICS:
             for cid, event in hidpp.analytics_events(msg.data):

@@ -112,6 +112,15 @@ def test_easy_switch_event_moves_mouse() -> None:
     assert kb.host_changes == []
 
 
+def test_change_host_announcement_moves_mouse() -> None:
+    kb, mouse = SimDevice("MX Keys S", 0), SimDevice("MX Master 3S", 3)
+    rx = SimReceiver({3: mouse, 4: kb})
+    rt = make_runtime(rx)
+    rt.scan()
+    rx.notify(bytes([0x11, 4, 10, 0x00, 0x01, 0x00] + [0] * 14))  # leaving 2 for 1
+    assert mouse.host_changes == [0]
+
+
 def test_events_from_other_devices_are_ignored() -> None:
     kb, mouse = SimDevice("MX Keys S", 0), SimDevice("MX Master 3S", 3)
     rx = SimReceiver({3: mouse, 4: kb})

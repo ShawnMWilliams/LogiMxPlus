@@ -49,3 +49,27 @@ cid=0x00D3 tid=0x00B0 flags=0x04 flags2=0x04   Host Switch Channel 3
   valid). `getCidReporting` then returns byte 5 = `01`.
 - **The event:** event 2 of the 1B04 feature, payload `CID(2) event(1)` records.
 - **The setting is volatile.** It is re-applied on every reconnect.
+
+## What the keyboard actually reports (tested 2026-11-27)
+
+**Firmware `RBK81.01_B0015` (0x1814 v1, 0x1B04 v5): nothing.**
+
+- Analytics was armed on every CID that supports it, and every echo came back `03`.
+- Pressing Easy-Switch 2 (the current host), F1 and F2 produced **no** notification of
+  any kind.
+- Pressing Easy-Switch 1 produced only the receiver's link-down event:
+  `10 04 41 10 41 78 b3` (wpid `B378`).
+
+This matches CleverSwitch issue
+[#113](https://github.com/MikalaiBarysevich/CleverSwitch/issues/113).
+
+**Firmware 81.2.17+ (Enhanced Easy-Switch): an announcement before leaving.**
+
+- On an Easy-Switch press the keyboard sends `11 DI FI(0x1814) 00 cur tgt ...` to the host
+  it is leaving, roughly 1 s before the link drops. `cur` and `tgt` are zero-based.
+- No enabling step is needed. Analytics events still never arrive.
+- Sources: CleverSwitch issues
+  [#102](https://github.com/MikalaiBarysevich/CleverSwitch/issues/102) and #113, and
+  [Logitech release notes](https://support.logi.com/hc/en-us/articles/39066494614423-MX-Keys-S-Firmware-Release-Notes).
+
+LogiMxPlus handles both the 0x1814 announcement and 0x1B04 analytics events.

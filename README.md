@@ -6,20 +6,41 @@ underneath it.
 
 Works over a **Logi Bolt** USB receiver and over Bluetooth, on Windows, macOS and Linux.
 
+## Requirement: keyboard firmware 81.2.17 or newer
+
+The MX Keys S only says where it is going on firmware **81.2.17+** (April 2026, the
+"Enhanced Easy-Switch" update). Older firmware such as `RBK81.01_B0015` switches
+silently, and nothing on the computer can tell which key was pressed.
+
+`logimxplus status` shows nothing about firmware. Check the version in Logi Options+.
+
+To update:
+
+1. Install [Logi Options+](https://www.logitech.com/software/logi-options-plus.html).
+2. Update the keyboard (and the mouse, while you're there).
+3. Optionally, uninstall Options+. The firmware stays on the device.
+
+If you keep Options+, leave its own *Enhanced Easy-Switch* toggle **off**. Two programs
+moving the mouse at once fight each other.
+
 ## How it works
 
-The MX Keys S Easy-Switch keys can't be intercepted ("diverted"): the keyboard always
-switches itself. They do support HID++ *analytics key events*, though. LogiMxPlus turns
-those on, so the keyboard also **tells** the computer which Easy-Switch key was pressed,
-just before it leaves. LogiMxPlus then sends the mouse the HID++ `CHANGE_HOST` (0x1814)
-command for the same channel.
+The MX Keys S Easy-Switch keys can't be intercepted: the keyboard always switches itself.
+On current firmware, the keyboard sends a HID++ `CHANGE_HOST` (0x1814) notification
+just before it leaves, to the computer it is leaving. The notification says
+`[this host, target host]`. LogiMxPlus then sends the mouse `CHANGE_HOST` for the same
+channel.
 
 ```
 press Easy-Switch 1 on computer B
-  keyboard ──(analytics event: key 0xD1)──▶ LogiMxPlus on B
-  keyboard ──switches itself to channel 1
+  keyboard ──(0x1814 notice: leaving 2 for 1)──▶ LogiMxPlus on B
+  keyboard ──switches itself to channel 1 (~1 s later)
   LogiMxPlus on B ──CHANGE_HOST(channel 1)──▶ mouse ──▶ computer A
 ```
+
+For keyboards that report key presses instead, such as the original MX Keys, LogiMxPlus
+also arms HID++ 0x1B04 *analytics key events* on the Easy-Switch keys (CIDs
+`0xD1`–`0xD3`). It handles either signal.
 
 Notes:
 

@@ -23,6 +23,12 @@ and explicit constraints. Work is done when every criterion below passes.
 | G6 | Starts automatically at login with no console window, on Windows and macOS. | `logimxplus install`, then sign out/in and see the process + log file. |
 | G7 | Code passes the quality gate. | `uv run ruff check . && uv run mypy && uv run pytest` exits 0. |
 
+## Prerequisite
+
+MX Keys S firmware **81.2.17+**. Older firmware sends no signal before switching (see
+[PROTOCOL.md](PROTOCOL.md)), so G1 cannot be met on it by any software running only
+on the computer being left.
+
 ## Constraints
 
 - Never persist changes on the devices: use only volatile HID++ settings (analytics

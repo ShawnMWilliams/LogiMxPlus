@@ -55,6 +55,7 @@ REPROG_SET_REPORTING = 3
 
 # Events
 REPROG_EVENT_ANALYTICS = 2
+CHANGE_HOST_EVENT = 0  # keyboard announces [current host, target host] before leaving
 WIRELESS_STATUS_EVENT = 0
 
 # setCidReporting byte 5: analytics key events (bit0) + valid (bit1)
