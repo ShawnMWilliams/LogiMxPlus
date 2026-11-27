@@ -189,8 +189,10 @@ pub fn connection_link_up(msg: &Message) -> Option<bool> {
 
 /// Decode analyticsKeyEvents: 3-byte records `CID(be16) event`, ended by a zero CID.
 pub fn analytics_events(data: &[u8]) -> Vec<(u16, u8)> {
-    data.chunks_exact(3)
-        .map(|r| (u16::from_be_bytes([r[0], r[1]]), r[2]))
+    let (records, _rest) = data.as_chunks::<3>();
+    records
+        .iter()
+        .map(|&[hi, lo, event]| (u16::from_be_bytes([hi, lo]), event))
         .take_while(|(cid, _)| *cid != 0)
         .collect()
 }
