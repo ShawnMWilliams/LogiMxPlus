@@ -191,7 +191,9 @@ Remove-Item -Recurse "$env:LOCALAPPDATA\Programs\LogiMxPlus"
 | `LogiMxPlus.exe config` | Create the config file and print its path and the login entry |
 | `LogiMxPlus.exe install` / `uninstall` | Add or remove the login entry |
 
-The log is at `%APPDATA%\LogiMxPlus\logimxplus.log`.
+The log is at `%APPDATA%\LogiMxPlus\logimxplus.log`. It is capped at 1 MB: when it
+passes that, it becomes `logimxplus.log.1` (replacing the previous one) and a new log
+starts. So the logs never use more than about 2 MB, which is weeks of normal use.
 
 ## Configuration
 

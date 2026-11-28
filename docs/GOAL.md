@@ -31,7 +31,7 @@ and explicit constraints. Work is done when every criterion below passes.
 | G1 | ✅ Met (Bolt), in both directions | Rust 0.3.1: Easy-Switch 1 moved the mouse 0.66 s after the press. With LogiMxPlus on both computers, switching back made the channel-1 PC send the mouse back by itself. Confirmed by the user and in the logs. |
 | G2 | ✅ | The keyboard switched itself in the same test. Nothing was diverted. |
 | G3 | ◐ | Bolt verified. Bluetooth covered by unit test only. |
-| G4 | ◐ Reconnect ✅ / sleep ⏳ | Reconnect: unit test, plus a live re-arm on keyboard return seen in the log. Sleep: 0.3.1 failed after hibernation (channel 1 stopped sending the mouse away). 0.3.2 fixes it (`runtime::tests::waking_from_sleep_finds_devices_that_arrived_silently`); a hibernate test on hardware is still to do. |
+| G4 | ✅ | Reconnect: unit test, plus a live re-arm on keyboard return seen in the log. Sleep: 0.3.1 failed after hibernation (channel 1 stopped sending the mouse away). 0.3.2 fixes it (`runtime::tests::waking_from_sleep_finds_devices_that_arrived_silently`). On 2026-11-28 the user hibernated each PC in turn, woke it, and the mouse followed the keyboard both ways. |
 | G5 | ✅ | Unit tests. |
 | G6 | ✅ Windows / ⏳ macOS, Linux | Both PCs run v0.3.1 from `%LOCALAPPDATA%\Programs\LogiMxPlus` with an HKCU Run entry. The channel-1 PC was restarted and LogiMxPlus started at sign-in by itself. It keeps running after the terminal that launched it closes (fixed in 0.3.1). macOS and Linux: see [PLATFORMS.md](PLATFORMS.md). |
 | G7 | ✅ | The cargo gate passes (35 tests). The Python reference in `python/` still passes its own gate (39 tests). |

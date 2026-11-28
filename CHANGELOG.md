@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.3: log size cap (2026-11-28) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.3)
+
+- **Fix:** the log was only checked for size when LogiMxPlus started. Sleep and
+  hibernation don't restart it, so on a PC that stays up for months the log could keep
+  growing. Now it is checked as it is written: past 1 MB it becomes
+  `logimxplus.log.1` (replacing the previous one) and a fresh log starts. The logs never
+  use more than about 2 MB. The check is a byte counter in memory: no extra disk access,
+  timers or CPU.
+- **Verified:** the 0.3.2 sleep fix passed on hardware. Each PC was hibernated and woken
+  in turn, and the mouse followed the keyboard both ways.
+
 ## 0.3.2: works after sleep and hibernation (2026-11-28) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.2)
 
 - **Fix:** after a computer woke from hibernation, it stopped sending the mouse away when
