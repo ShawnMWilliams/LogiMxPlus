@@ -10,7 +10,10 @@
 - **Now:** when Windows reports a wake from sleep or hibernation, LogiMxPlus waits 2 s,
   then reopens the receiver, turns notifications back on and finds the devices again.
   If the wake notification never arrives, a jump in the clock triggers the same thing
-  within a minute. No polling was added: idle CPU and memory are unchanged.
+  within a minute. No polling was added.
+- **Cost, measured after 3 minutes idle:** still 0 ms CPU, 3 threads and about 0.40 MB in
+  Task Manager. Committed memory went from 0.89 MB to 0.96 MB, most likely for the
+  Windows power-notification library.
 
 ## 0.3.1: stays running when its terminal closes (2026-11-27) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.1)
 
