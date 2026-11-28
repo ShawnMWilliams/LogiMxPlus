@@ -7,7 +7,7 @@ use std::ffi::CString;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::config::Config;
 use crate::device::HidppDevice;
@@ -23,6 +23,16 @@ const RECEIVER_NOTIFICATION_FLAGS: [u8; 3] = [0x00, 0x09, 0x00];
 const RESCAN_IDLE: Duration = Duration::from_secs(5);
 /// Otherwise rarely: catches a second receiver or a Bluetooth device appearing.
 const RESCAN_ACTIVE: Duration = Duration::from_secs(60);
+/// After waking from sleep, give USB a moment to bring the receiver back first.
+const RESUME_SETTLE: Duration = Duration::from_secs(2);
+
+/// The event loop never waits longer than [`RESCAN_ACTIVE`] while the computer is awake,
+/// so a much bigger jump in wall-clock time between two turns means it slept. This is
+/// the fallback for when the platform's wake-up notification is missing.
+fn slept(before: SystemTime, now: SystemTime) -> bool {
+    now.duration_since(before)
+        .is_ok_and(|gap| gap > RESCAN_ACTIVE + Duration::from_secs(30))
+}
 
 /// Finds and opens HID++ endpoints. The real one uses hidapi; tests use a fake.
 pub trait Discovery {
@@ -85,6 +95,7 @@ pub struct Runtime<D: Discovery> {
     mouse: Option<Attached>,
     events_tx: Sender<Event>,
     events_rx: Receiver<Event>,
+    refresh_at: Option<Instant>,
 }
 
 impl<D: Discovery> Runtime<D> {
@@ -102,6 +113,7 @@ impl<D: Discovery> Runtime<D> {
             mouse: None,
             events_tx,
             events_rx,
+            refresh_at: None,
         }
     }
 
@@ -144,6 +156,26 @@ impl<D: Discovery> Runtime<D> {
                 self.attach(&t, hidpp::DIRECT_INDEX, 1, now);
             }
         }
+    }
+
+    /// Start over after sleep or hibernation. The receiver may have lost power: it then
+    /// forgets that it should report devices connecting (register 0x00), and the
+    /// keyboard and mouse may have come and gone without a word. So close every handle,
+    /// then open, re-arm and re-identify everything as if starting up.
+    pub fn refresh(&mut self, now: Instant) {
+        log::info!("woke from sleep: reopening devices");
+        let ids: Vec<u64> = self.transports.keys().copied().collect();
+        for id in ids {
+            if let Some(t) = self.transports.get(&id) {
+                t.close();
+            }
+            self.forget_transport(id);
+        }
+        self.scan(now);
+    }
+
+    fn schedule_refresh(&mut self, now: Instant) {
+        self.refresh_at.get_or_insert(now + RESUME_SETTLE);
     }
 
     fn forget_transport(&mut self, id: u64) {
@@ -242,6 +274,7 @@ impl<D: Discovery> Runtime<D> {
         match ev {
             Event::Closed { transport } => self.forget_transport(transport),
             Event::Notification { transport, msg } => self.on_notification(transport, &msg, now),
+            Event::Resumed => self.schedule_refresh(now),
         }
     }
 
@@ -298,12 +331,29 @@ impl<D: Discovery> Runtime<D> {
     /// Run until the process exits.
     pub fn run(&mut self) -> ! {
         log::info!("LogiMxPlus running");
+        let tx = self.events_tx.clone();
+        crate::platform::on_resume(Box::new(move || {
+            let _ = tx.send(Event::Resumed);
+        }));
         let mut next_scan = Instant::now();
+        let mut last_turn = SystemTime::now();
         let mut trimmed = false;
         loop {
             let now = Instant::now();
-            if now >= next_scan {
-                self.scan(now);
+            let wall = SystemTime::now();
+            if slept(last_turn, wall) {
+                log::debug!("clock jumped: the computer slept");
+                self.schedule_refresh(now);
+            }
+            last_turn = wall;
+            let refresh_due = self.refresh_at.is_some_and(|t| now >= t);
+            if refresh_due || now >= next_scan {
+                if refresh_due {
+                    self.refresh_at = None;
+                    self.refresh(now);
+                } else {
+                    self.scan(now);
+                }
                 if !trimmed {
                     crate::platform::trim_working_set(); // start-up done: hand pages back
                     trimmed = true;
@@ -315,9 +365,10 @@ impl<D: Discovery> Runtime<D> {
                         RESCAN_ACTIVE
                     };
             }
+            let wake = self.refresh_at.map_or(next_scan, |t| t.min(next_scan));
             match self
                 .events_rx
-                .recv_timeout(next_scan.saturating_duration_since(Instant::now()))
+                .recv_timeout(wake.saturating_duration_since(Instant::now()))
             {
                 Ok(ev) => {
                     let closed = matches!(ev, Event::Closed { .. });
@@ -338,6 +389,7 @@ mod tests {
     use super::*;
     use crate::domain::HidppError;
     use crate::hidpp::func;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Mutex;
 
     const FEATURES: [(u16, u8); 5] = [(0x0005, 1), (0x1814, 10), (0x1815, 11), (0x1B04, 9), (0x1D4B, 4)];
@@ -362,13 +414,18 @@ mod tests {
     }
 
     struct SimReceiver {
+        id: AtomicU64,
         devices: Mutex<HashMap<u8, SimDevice>>,
         registers: Mutex<Vec<(u8, [u8; 3])>>,
+        closed: Mutex<u32>,
     }
 
     impl Transport for SimReceiver {
         fn id(&self) -> u64 {
-            1
+            self.id.load(Ordering::SeqCst)
+        }
+        fn close(&self) {
+            *self.closed.lock().unwrap() += 1;
         }
         fn name(&self) -> &str {
             "sim"
@@ -433,15 +490,18 @@ mod tests {
                 short_path: None,
             }]
         }
-        fn open(&mut self, _: &Endpoint, _: u64, _: Sender<Event>) -> Option<Arc<dyn Transport>> {
+        fn open(&mut self, _: &Endpoint, id: u64, _: Sender<Event>) -> Option<Arc<dyn Transport>> {
+            self.0.id.store(id, Ordering::SeqCst);
             Some(self.0.clone())
         }
     }
 
     fn rig(devs: &[(u8, SimDevice)], config: Config) -> (Runtime<SimDiscovery>, Arc<SimReceiver>) {
         let rx = Arc::new(SimReceiver {
+            id: AtomicU64::new(0),
             devices: Mutex::new(devs.iter().cloned().collect()),
             registers: Mutex::new(Vec::new()),
+            closed: Mutex::new(0),
         });
         let mut rt = Runtime::new(config, SimDiscovery(rx.clone()));
         rt.scan(Instant::now());
@@ -457,7 +517,8 @@ mod tests {
 
     fn notify(rt: &mut Runtime<SimDiscovery>, raw: &[u8]) {
         let msg = hidpp::parse(raw).unwrap();
-        rt.handle(Event::Notification { transport: 1, msg }, Instant::now());
+        let transport = *rt.transports.keys().next().unwrap();
+        rt.handle(Event::Notification { transport, msg }, Instant::now());
     }
 
     fn dev(rx: &SimReceiver, index: u8) -> SimDevice {
@@ -523,6 +584,50 @@ mod tests {
         rx.devices.lock().unwrap().get_mut(&3).unwrap().disconnected = false;
         notify(&mut rt, &[0x10, 3, 0x41, 0x10, 0x02, 0x34, 0xB0]);
         assert_eq!(dev(&rx, 3).host_changes, vec![2]);
+    }
+
+    /// Channel 1 after hibernating: the receiver lost power and forgot register 0x00, so
+    /// the keyboard and mouse arrived without a 0x41 connection report.
+    #[test]
+    fn waking_from_sleep_finds_devices_that_arrived_silently() {
+        let mut away_kb = sim("MX Keys S", 0);
+        let mut away_mouse = sim("MX Master 3S", 3);
+        for d in [&mut away_kb, &mut away_mouse] {
+            d.disconnected = true;
+            d.host = 0; // this computer is channel 1
+        }
+        let (mut rt, rx) = rig(&[(3, away_mouse), (4, away_kb)], Config::default());
+        assert!(!rt.has_devices());
+        for d in rx.devices.lock().unwrap().values_mut() {
+            d.disconnected = false; // arrived, but nobody told us
+        }
+
+        rt.refresh(Instant::now());
+
+        assert!(rt.keyboard.is_some() && rt.mouse.is_some());
+        assert_eq!(*rx.closed.lock().unwrap(), 1, "old handles are closed");
+        assert_eq!(rx.registers.lock().unwrap().len(), 2, "notifications re-enabled");
+        notify(&mut rt, &long([0x11, 4, 10, 0x00], &[0x00, 0x01])); // leaving 1 for 2
+        assert_eq!(dev(&rx, 3).host_changes, vec![1]);
+    }
+
+    #[test]
+    fn resume_event_schedules_a_refresh() {
+        let (mut rt, _) = standard();
+        let now = Instant::now();
+        rt.handle(Event::Resumed, now);
+        assert_eq!(rt.refresh_at, Some(now + RESUME_SETTLE));
+        rt.handle(Event::Resumed, now + Duration::from_secs(1));
+        assert_eq!(rt.refresh_at, Some(now + RESUME_SETTLE), "first one wins");
+    }
+
+    #[test]
+    fn clock_jump_means_the_computer_slept() {
+        let t = std::time::SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000);
+        assert!(!slept(t, t + RESCAN_ACTIVE));
+        assert!(!slept(t, t + RESCAN_ACTIVE + Duration::from_secs(20)));
+        assert!(slept(t, t + Duration::from_secs(8 * 3600)));
+        assert!(!slept(t, t - Duration::from_secs(3600)), "clock set back");
     }
 
     #[test]

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.2: works after sleep and hibernation (2026-11-28) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.2)
+
+- **Fix:** after a computer woke from hibernation, it stopped sending the mouse away when
+  you pressed Easy-Switch. The Bolt receiver had lost power and forgotten the setting
+  that makes it report devices connecting. So when the keyboard and mouse came back,
+  LogiMxPlus never heard about them and ignored the keyboard's switch announcement.
+  Restarting LogiMxPlus fixed it, because start-up turns that setting back on.
+- **Now:** when Windows reports a wake from sleep or hibernation, LogiMxPlus waits 2 s,
+  then reopens the receiver, turns notifications back on and finds the devices again.
+  If the wake notification never arrives, a jump in the clock triggers the same thing
+  within a minute. No polling was added: idle CPU and memory are unchanged.
+
 ## 0.3.1: stays running when its terminal closes (2026-11-27) — [release](https://github.com/ShawnMWilliams/LogiMxPlus/releases/tag/v0.3.1)
 
 - **Fix:** `LogiMxPlus.exe run` started from a PowerShell window no longer attaches to

@@ -23,8 +23,15 @@ const USAGE_PAGE_BLE: u16 = 0xFF43; // Bluetooth LE devices: usage 0x0202 = long
 /// Something a transport tells the runtime.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
-    Notification { transport: u64, msg: Message },
-    Closed { transport: u64 },
+    Notification {
+        transport: u64,
+        msg: Message,
+    },
+    Closed {
+        transport: u64,
+    },
+    /// The computer woke from sleep or hibernation (sent by the platform layer).
+    Resumed,
 }
 
 pub trait Transport: Send + Sync {
@@ -41,6 +48,8 @@ pub trait Transport: Send + Sync {
         timeout: Duration,
     ) -> Result<Vec<u8>>;
     fn write_receiver_register(&self, register: u8, value: [u8; 3]) -> Result<()>;
+    /// Stop using this transport. Its reader threads exit on their next report.
+    fn close(&self);
 }
 
 /// One HID collection as reported by enumeration (plain data, so grouping is testable).
@@ -201,6 +210,7 @@ fn read_loop(
     loop {
         match reader.read_timeout(&mut buf, -1) {
             Ok(0) => continue,
+            Ok(_) if !alive.load(Ordering::SeqCst) => return, // closed by the runtime
             Ok(n) => {
                 log::trace!("{name} < {}", hex(&buf[..n]));
                 let Some(msg) = hidpp::parse(&buf[..n]) else {
@@ -216,9 +226,10 @@ fn read_loop(
                 }
             }
             Err(e) => {
-                log::warn!("{name}: read failed ({e}); transport closed");
-                alive.store(false, Ordering::SeqCst);
-                let _ = events.send(Event::Closed { transport: id });
+                if alive.swap(false, Ordering::SeqCst) {
+                    log::warn!("{name}: read failed ({e}); transport closed");
+                    let _ = events.send(Event::Closed { transport: id });
+                }
                 return;
             }
         }
@@ -291,6 +302,10 @@ impl Transport for HidTransport {
     fn write_receiver_register(&self, register: u8, value: [u8; 3]) -> Result<()> {
         let report = hidpp::build_register_write(register, value);
         self.write(self.short_writer.as_ref().unwrap_or(&self.long_writer), &report)
+    }
+
+    fn close(&self) {
+        self.alive.store(false, Ordering::SeqCst);
     }
 }
 

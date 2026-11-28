@@ -1,6 +1,6 @@
 [package]
 name = "logimxplus"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 rust-version = "1.89"
 description = "LogiMxPlus"
@@ -21,10 +21,12 @@ toml = { version = "1.2", default-features = false, features = ["std", "parse", 
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_System_Console",
+    "Win32_System_Power",
     "Win32_System_Registry",
     "Win32_System_Threading",
     "Win32_Security",
     "Win32_System_SystemInformation",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 
 [build-dependencies]

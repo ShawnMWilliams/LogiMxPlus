@@ -1,5 +1,5 @@
 //! OS integration: console output for a windowless exe, local timestamps, single
-//! instance, and starting at login.
+//! instance, wake-from-sleep notifications, and starting at login.
 //!
 //! Windows is the tested platform. The macOS and Linux branches compile and follow the
 //! documented conventions but have not been run on real hardware; see docs/PLATFORMS.md.
@@ -90,6 +90,49 @@ pub fn eprint(text: &str) {
         }
     }
 }
+
+/// Call `f` (on a system thread) each time the computer wakes from sleep or hibernation.
+/// The registration lasts for the life of the process.
+#[cfg(windows)]
+pub fn on_resume(f: Box<dyn Fn() + Send + Sync>) {
+    use std::ffi::c_void;
+    use windows_sys::Win32::System::Power::{
+        PowerRegisterSuspendResumeNotification, DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        DEVICE_NOTIFY_CALLBACK, PBT_APMRESUMEAUTOMATIC, PBT_APMRESUMESUSPEND,
+    };
+
+    type Callback = Box<dyn Fn() + Send + Sync>;
+
+    unsafe extern "system" fn on_power(context: *const c_void, kind: u32, _: *const c_void) -> u32 {
+        if kind == PBT_APMRESUMEAUTOMATIC || kind == PBT_APMRESUMESUSPEND {
+            // SAFETY: `context` is the leaked `Callback` below, valid for the process lifetime.
+            let f = unsafe { &*context.cast::<Callback>() };
+            f();
+        }
+        0
+    }
+
+    // Leaked on purpose: Windows keeps both pointers for as long as the process runs.
+    let context: *mut Callback = Box::into_raw(Box::new(f));
+    let params = Box::into_raw(Box::new(DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS {
+        Callback: Some(on_power),
+        Context: context.cast(),
+    }));
+    let mut registration = std::ptr::null_mut();
+    // SAFETY: `params` points to a valid, never-freed struct; `registration` is written once.
+    let rc = unsafe {
+        PowerRegisterSuspendResumeNotification(DEVICE_NOTIFY_CALLBACK, params.cast(), &mut registration)
+    };
+    if rc != 0 {
+        log::warn!("cannot subscribe to wake-from-sleep notifications (error {rc})");
+    }
+}
+
+/// Not wired up yet; the runtime's clock-jump check notices sleep instead.
+#[cfg(not(windows))]
+pub fn on_resume(_f: Box<dyn Fn() + Send + Sync>) {}
 
 /// `YYYY-MM-DD HH:MM:SS.mmm` in local time (Windows) or UTC (elsewhere, marked `Z`).
 pub fn local_timestamp() -> String {

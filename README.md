@@ -97,7 +97,8 @@ Notes:
   the keyboard is *leaving*, which is the computer the mouse is on too.
 - **The settings are volatile.** Nothing is written to the devices permanently, so on a
   computer without LogiMxPlus the keyboard and mouse behave exactly as stock.
-  LogiMxPlus re-arms them after every reconnect.
+  LogiMxPlus re-arms them after every reconnect, and after the computer wakes from
+  sleep or hibernation (the receiver can lose power and forget them).
 - **If the mouse is asleep** when you press the key, the switch is held for up to two
   minutes and applied the moment the mouse wakes up. Nudge the mouse and it follows.
 

@@ -95,6 +95,11 @@ machine to test on.
    appearing on the target computer.
 3. Return: the log shows `keyboard ready … Easy-Switch reporting enabled` (the re-arm).
 4. Unplug and re-plug the receiver. LogiMxPlus finds it again within ~5 s.
-5. `logimxplus install`, then log out and back in. The process is running.
-6. Measure idle CPU and memory, and compare with Windows (0 ms CPU per minute, under
+5. Sleep or hibernate, wake, then switch away from this computer. The mouse follows.
+   (The log shows `woke from sleep: reopening devices`.) On Windows the wake comes from
+   `PowerRegisterSuspendResumeNotification`. Elsewhere `platform::on_resume` is still a
+   stub, and the runtime notices the clock jump within a minute instead. Wire it to
+   `NSWorkspaceDidWakeNotification` (macOS) or logind's `PrepareForSleep` (Linux).
+6. `logimxplus install`, then log out and back in. The process is running.
+7. Measure idle CPU and memory, and compare with Windows (0 ms CPU per minute, under
    1 MB private).
